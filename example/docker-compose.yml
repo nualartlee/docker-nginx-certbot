@@ -1,4 +1,4 @@
-version: '3'
+version: '3.1'
 
 services:
   proxy:
@@ -7,5 +7,5 @@ services:
     environment:
       CERTBOT_EMAIL: "your.email@example.com"
     ports:
-      - "80:80"
-      - "443:443"
+      - "10080:80"
+      - "10443:443"

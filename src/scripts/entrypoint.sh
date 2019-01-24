@@ -10,27 +10,36 @@ trap "kill 0" EXIT
 # Immediately run auto_enable_configs so that nginx is in a runnable state
 auto_enable_configs
 
-# Start up nginx, save PID so we can reload config inside of run_certbot.sh
+# Stop any lingering nginx processes
+killall nginx
+
+# Print nginx configuration test
+echo "$(nginx -t)"
+
+# Start up nginx
 nginx -g "daemon off;" &
 export NGINX_PID=$!
 
+# Next, run certbot to request all the ssl certs we can find
+/scripts/run_certbot.sh
+
 # Lastly, run startup scripts
 for f in /scripts/startup/*.sh; do
-    if [ -x "$f" ]; then
+    if [[ -x "$f" ]]; then
         echo "Running startup script $f"
         $f
     fi
 done
 echo "Done with startup"
 
-# Instead of trying to run `cron` or something like that, just sleep and run `certbot`.
+# Instead of trying to run `cron` or something like that, just leep and run `certbot`.
 while [ true ]; do
-    echo "Run certbot"
-    /scripts/run_certbot.sh
-
     # Sleep for 1 week
-    sleep 604810 &
+    sleep 604800 &
     SLEEP_PID=$!
+
+    # re-run certbot
+    /scripts/run_certbot.sh
 
     # Wait on sleep so that when we get ctrl-c'ed it kills everything due to our trap
     wait "$SLEEP_PID"

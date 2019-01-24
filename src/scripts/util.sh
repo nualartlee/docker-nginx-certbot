@@ -13,9 +13,11 @@ error() {
 # a very restricted set of keys: Each key must map to a set of concrete domains
 # (no wildcards) and each keyfile will be stored at the default location of
 # /etc/letsencrypt/live/<primary_domain_name>/privkey.pem
+#
+# Only files marked as certbot (*.certbot.conf) are parsed
 parse_domains() {
-    # For each configuration file in /etc/nginx/conf.d/*.conf*
-    for conf_file in /etc/nginx/conf.d/*.conf*; do
+    # For each configuration file in /etc/nginx/conf.d/*.certbot.conf*
+    for conf_file in /etc/nginx/conf.d/*.certbot.conf*; do
         sed -n -e 's&^\s*ssl_certificate_key\s*\/etc/letsencrypt/live/\(.*\)/privkey.pem;&\1&p' $conf_file | xargs echo
     done
 }
