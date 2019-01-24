@@ -1,5 +1,5 @@
 # docker-nginx-certbot
-Create and automatically renew website SSL certificates using the letsencrypt free certificate authority, and its client *certbot*, built on top of the nginx server.
+Create and automatically renew website SSL certificates using the LetsEncrypt free certificate authority, and its client *certbot*, built on top of the nginx server.
 
 # More information
 
@@ -7,27 +7,62 @@ Find out more about letsencrypt: https://letsencrypt.org
 
 Certbot github: https://github.com/certbot/certbot
 
-This repository was originally forked from `@henridwyer`, many thanks to him for the good idea.  I've rewritten about 90% of this repository, so it bears almost no resemblance to the original.  This repository is _much_ more opinionated about the structure of your webservers/containers, however it is easier to use as long as all of your webservers follow that pattern.
+This repository was forked from `@staticfloat`, many thanks to him for the good code.  It remains close to the original, I've just added a few tweaks to suit my needs:
+- Certbot will only request certificates for domains in `*.certbot.conf` files
+- Certbot will not request certificates if the domain does not resolve to the machine's IP
+
+Handling conf files in this way allows nginx to remain open to unencrypted traffic if the certificate is missing, and to simultaneously use other certificate authorities or
+self signed certificates.
 
 # Usage
 
 Use this image with a `Dockerfile` such as:
 ```Dockerfile
-FROM staticfloat/nginx-certbot
+FROM nualartlee/nginx-certbot
 COPY *.conf /etc/nginx/conf.d/
 ```
 
-And a `.conf` file such as:
+Add a `.conf` file for unencrypted traffic.
+Include certbot's url location as below:
 ```nginx
 server {
-    listen              443 ssl;
-    server_name         server.company.com;
-    ssl_certificate     /etc/letsencrypt/live/server.company.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/server.company.com/privkey.pem;
+	listen	80;
+	listen	[::]:80;
+	server_name mysite.com;
 
-    location / {
-        ...
-    }
+	# Pass this particular URL off to certbot, to authenticate HTTPS certificates
+	location /.well-known/acme-challenge {
+	  default_type "text/plain";
+	  proxy_pass http://localhost:1337;
+        }
+
+        # Everything else gets served by the site
+        location / {
+
+            # Serve the site unencrypted
+            root /www;
+
+	    # Optionally, redirect to https
+            #return 301 https://$http_host$request_uri;
+        }
+}
+```
+
+Add a `.certbot.conf` file for LetsEncrypt certified https traffic.
+Specify the certificate locations according to the certbot standard.
+If the certificate request fails, or if the domain does not point here,
+this file will be disabled appending `.nokey`.
+```nginx
+server {
+	listen      443 ssl;
+	listen      [::]:443 ssl;
+	server_name mysite.com;
+	ssl_certificate     /etc/letsencrypt/live/mysite.com/fullchain.pem;
+	ssl_certificate_key /etc/letsencrypt/live/mysite.com/privkey.pem;
+
+	location / {
+        root /www;
+	}
 }
 ```
 
@@ -42,11 +77,17 @@ services:
             - 80:80/tcp
             - 443:443/tcp
         environment:
-            - CERTBOT_EMAIL=owner@company.com
+            - CERTBOT_EMAIL=owner@mysite.com
   ...
 ```
 
 # Changelog
+
+### 0.9
+- Forked form Staticfloat to modify for my needs; Thanks Staticfloat!
+- Change nginx startup to kill lingering processes and to specify pid file location for reloads.
+- Certbot will only request certificates for config files in the *.certbot.conf format.
+- Certbot will only request certificates for domains pointing to the running machine's IP
 
 ### 0.8
 - Ditch cron, it never liked me anway.  Just use `sleep` and a `while` loop instead.
