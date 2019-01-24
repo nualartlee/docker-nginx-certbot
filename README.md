@@ -84,8 +84,8 @@ services:
 # Changelog
 
 ### 0.9
-- Forked form Staticfloat to modify for my needs; Thanks Staticfloat!
-- Change nginx startup to kill lingering processes and to specify pid file location for reloads.
+- Forked form Staticfloat to modify for my needs (Thanks!)
+- Modified entrypoint.sh to kill any lingering nginx processes.
 - Certbot will only request certificates for config files in the *.certbot.conf format.
 - Certbot will only request certificates for domains pointing to the running machine's IP
 
